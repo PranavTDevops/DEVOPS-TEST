@@ -1,19 +1,19 @@
 const { Pool } = require('pg');
 const Redis = require('ioredis');
 
-// PostgreSQL connection (Docker)
+// PostgreSQL connection (Docker container hostname)
 const pool = new Pool({
   user: 'ec2user',           // Docker PostgreSQL user
-  host: 'postgres',          // <-- Docker container name
+  host: 'postgres',          // Docker container name in network
   database: 'tasksdb',
   password: 'yourpassword',  // Docker PostgreSQL password
   port: 5432,
 });
 
-// Redis connection (Docker)
+// Redis connection (Docker container hostname)
 const redis = new Redis({
-  host: 'redis',             // <-- Docker container name
-  port: 6379
+  host: 'redis',             // Docker container name in network
+  port: 6379,
 });
 
 // Function to process tasks

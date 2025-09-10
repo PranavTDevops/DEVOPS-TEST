@@ -13,7 +13,7 @@ app.use(bodyParser.json());
 // Connect to PostgreSQL (Docker container hostname)
 const pool = new Pool({
   user: 'ec2user',           // PostgreSQL user
-  host: 'postgres',          // <-- Docker container name
+  host: 'postgres',          // Docker container name in network
   database: 'tasksdb',
   password: 'yourpassword',  // PostgreSQL password
   port: 5432,
@@ -21,7 +21,7 @@ const pool = new Pool({
 
 // Connect to Redis (Docker container hostname)
 const redis = new Redis({
-  host: 'redis',             // <-- Docker container name
+  host: 'redis',             // Docker container name in network
   port: 6379,
 });
 

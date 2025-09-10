@@ -1,5 +1,5 @@
 const http = require('http');
-const port = process.env.PORT || 3000; // choose 3000 for now
+const port = process.env.PORT || 80; // run on standard HTTP port
 
 const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/html' });

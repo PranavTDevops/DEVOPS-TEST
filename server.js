@@ -10,17 +10,20 @@ const port = process.env.PORT || 3000;
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-// Connect to PostgreSQL
+// Connect to PostgreSQL (Docker container user)
 const pool = new Pool({
-  user: 'postgres',
+  user: 'ec2user',           // Docker PostgreSQL user
   host: 'localhost',
   database: 'tasksdb',
-  password: 'yourpassword',
+  password: 'yourpassword',  // Docker PostgreSQL password
   port: 5432,
 });
 
-// Connect to Redis
-const redis = new Redis();
+// Connect to Redis (Docker container)
+const redis = new Redis({
+  host: '127.0.0.1',
+  port: 6379,
+});
 
 // HTML Form route
 app.get('/', (req, res) => {
@@ -35,26 +38,41 @@ app.get('/', (req, res) => {
 
 // Handle form submission
 app.post('/task', async (req, res) => {
-  const task = req.body.task;
-  
-  // Save task in PostgreSQL
-  const result = await pool.query(
-    'INSERT INTO tasks (description, status) VALUES ($1, $2) RETURNING *',
-    [task, 'pending']
-  );
+  try {
+    const task = req.body.task;
 
-  // Push to Redis queue
-  await redis.lpush('task_queue', JSON.stringify(result.rows[0]));
+    // Save task in PostgreSQL
+    const result = await pool.query(
+      'INSERT INTO tasks (description, status) VALUES ($1, $2) RETURNING *',
+      [task, 'pending']
+    );
 
-  res.send('Task submitted successfully!');
+    // Push to Redis queue
+    await redis.lpush('task_queue', JSON.stringify(result.rows[0]));
+
+    res.send(`
+      Task submitted successfully!<br/>
+      <a href="/">Submit another task</a><br/>
+      <a href="/tasks">View latest tasks</a>
+    `);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error submitting task');
+  }
 });
 
 // Check latest tasks
 app.get('/tasks', async (req, res) => {
-  const result = await pool.query('SELECT * FROM tasks ORDER BY id DESC LIMIT 10');
-  res.json(result.rows);
+  try {
+    const result = await pool.query('SELECT * FROM tasks ORDER BY id DESC LIMIT 10');
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error fetching tasks');
+  }
 });
 
+// Start server
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server running at http://0.0.0.0:${port}`);
 });

@@ -6,7 +6,8 @@ const server = http.createServer((req, res) => {
   res.end('<h1>Hello from AWS EC2 Web Server!</h1>');
 });
 
-server.listen(port, () => {
+server.listen(port, '0.0.0.0', () => {
   console.log(`Server running at http://0.0.0.0:${port}`);
 });
+
 

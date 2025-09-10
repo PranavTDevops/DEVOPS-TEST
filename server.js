@@ -10,18 +10,18 @@ const port = process.env.PORT || 3000;
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-// Connect to PostgreSQL (Docker container user)
+// Connect to PostgreSQL (Docker container hostname)
 const pool = new Pool({
-  user: 'ec2user',           // Docker PostgreSQL user
-  host: 'localhost',
+  user: 'ec2user',           // PostgreSQL user
+  host: 'postgres',          // <-- Docker container name
   database: 'tasksdb',
-  password: 'yourpassword',  // Docker PostgreSQL password
+  password: 'yourpassword',  // PostgreSQL password
   port: 5432,
 });
 
-// Connect to Redis (Docker container)
+// Connect to Redis (Docker container hostname)
 const redis = new Redis({
-  host: '127.0.0.1',
+  host: 'redis',             // <-- Docker container name
   port: 6379,
 });
 

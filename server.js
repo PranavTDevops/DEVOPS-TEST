@@ -1,11 +1,60 @@
-const http = require('http');
-const port = process.env.PORT || 80; // run on standard HTTP port
+const express = require('express');
+const bodyParser = require('body-parser');
+const { Pool } = require('pg');
+const Redis = require('ioredis');
 
-const server = http.createServer((req, res) => {
-  res.writeHead(200, { 'Content-Type': 'text/html' });
-  res.end('<h1>Hello from AWS EC2 Web Server!</h1>');
+const app = express();
+const port = process.env.PORT || 3000;
+
+// Middleware
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+
+// Connect to PostgreSQL
+const pool = new Pool({
+  user: 'postgres',
+  host: 'localhost',
+  database: 'tasksdb',
+  password: 'yourpassword',
+  port: 5432,
 });
 
-server.listen(port, '0.0.0.0', () => {
+// Connect to Redis
+const redis = new Redis();
+
+// HTML Form route
+app.get('/', (req, res) => {
+  res.send(`
+    <h1>Submit a Task</h1>
+    <form action="/task" method="POST">
+      <input type="text" name="task" placeholder="Enter task" required />
+      <button type="submit">Submit</button>
+    </form>
+  `);
+});
+
+// Handle form submission
+app.post('/task', async (req, res) => {
+  const task = req.body.task;
+  
+  // Save task in PostgreSQL
+  const result = await pool.query(
+    'INSERT INTO tasks (description, status) VALUES ($1, $2) RETURNING *',
+    [task, 'pending']
+  );
+
+  // Push to Redis queue
+  await redis.lpush('task_queue', JSON.stringify(result.rows[0]));
+
+  res.send('Task submitted successfully!');
+});
+
+// Check latest tasks
+app.get('/tasks', async (req, res) => {
+  const result = await pool.query('SELECT * FROM tasks ORDER BY id DESC LIMIT 10');
+  res.json(result.rows);
+});
+
+app.listen(port, '0.0.0.0', () => {
   console.log(`Server running at http://0.0.0.0:${port}`);
 });

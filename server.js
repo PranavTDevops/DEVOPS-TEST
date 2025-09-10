@@ -10,19 +10,24 @@ const port = process.env.PORT || 3000;
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-// Connect to PostgreSQL (Docker container hostname)
+// PostgreSQL connection (Docker container hostname)
 const pool = new Pool({
-  user: 'ec2user',           // PostgreSQL user
-  host: 'postgres',          // Docker container name in network
-  database: 'tasksdb',
-  password: 'yourpassword',  // PostgreSQL password
-  port: 5432,
+  user: process.env.PG_USER || 'ec2user',
+  host: process.env.PG_HOST || 'postgres',    // Docker container name
+  database: process.env.PG_DB || 'tasksdb',
+  password: process.env.PG_PASSWORD || 'yourpassword',
+  port: process.env.PG_PORT || 5432,
 });
 
-// Connect to Redis (Docker container hostname)
+// Redis connection (Docker container hostname)
 const redis = new Redis({
-  host: 'redis',             // Docker container name in network
-  port: 6379,
+  host: process.env.REDIS_HOST || 'redis',    // Docker container name
+  port: process.env.REDIS_PORT || 6379,
+});
+
+// Handle Redis errors
+redis.on('error', (err) => {
+  console.error('Redis error:', err);
 });
 
 // HTML Form route
@@ -56,7 +61,7 @@ app.post('/task', async (req, res) => {
       <a href="/tasks">View latest tasks</a>
     `);
   } catch (err) {
-    console.error(err);
+    console.error('Error submitting task:', err);
     res.status(500).send('Error submitting task');
   }
 });
@@ -64,15 +69,4 @@ app.post('/task', async (req, res) => {
 // Check latest tasks
 app.get('/tasks', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM tasks ORDER BY id DESC LIMIT 10');
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Error fetching tasks');
-  }
-});
-
-// Start server
-app.listen(port, '0.0.0.0', () => {
-  console.log(`Server running at http://0.0.0.0:${port}`);
-});
+    const result = await pool.quer

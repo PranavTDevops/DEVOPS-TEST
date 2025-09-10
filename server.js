@@ -6,8 +6,11 @@ const server = http.createServer((req, res) => {
   res.end('<h1>Hello from AWS EC2 Web Server!</h1>');
 });
 
+const port = process.env.PORT || 80;
+
 server.listen(port, '0.0.0.0', () => {
   console.log(`Server running at http://0.0.0.0:${port}`);
 });
+
 
 

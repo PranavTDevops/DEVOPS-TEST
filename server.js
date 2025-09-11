@@ -1,3 +1,4 @@
+// server.js
 const express = require('express');
 const bodyParser = require('body-parser');
 const { Pool } = require('pg');
@@ -10,19 +11,33 @@ const port = process.env.PORT || 3000;
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-// PostgreSQL connection
+// PostgreSQL connection using env vars (defaults for local Docker)
 const pool = new Pool({
-  user: 'ec2user',
-  host: 'postgres',
-  database: 'tasksdb',
-  password: 'yourpassword',
-  port: 5432,
+  user: process.env.PGUSER || 'ec2user',
+  host: process.env.PGHOST || 'postgres',
+  database: process.env.PGDATABASE || 'tasksdb',
+  password: process.env.PGPASSWORD || 'yourpassword',
+  port: Number(process.env.PGPORT || 5432),
 });
 
-// Redis connection
+// Redis connection using env vars
 const redis = new Redis({
-  host: 'redis',
-  port: 6379,
+  host: process.env.REDIS_HOST || 'redis',
+  port: Number(process.env.REDIS_PORT || 6379),
+});
+
+// Health endpoint used by k8s / Route53 health checks
+app.get('/health', async (req, res) => {
+  try {
+    // simple DB ping
+    await pool.query('SELECT 1');
+    // simple redis ping
+    const pong = await redis.ping();
+    if (pong !== 'PONG') throw new Error('redis not ok');
+    return res.status(200).send('OK');
+  } catch (err) {
+    return res.status(500).send('ERROR');
+  }
 });
 
 // HTML Form route
@@ -40,16 +55,11 @@ app.get('/', (req, res) => {
 app.post('/task', async (req, res) => {
   try {
     const task = req.body.task;
-
-    // Save task in PostgreSQL
     const result = await pool.query(
       'INSERT INTO tasks (description, status) VALUES ($1, $2) RETURNING *',
       [task, 'pending']
     );
-
-    // Push to Redis queue
     await redis.lpush('task_queue', JSON.stringify(result.rows[0]));
-
     res.send(`
       Task submitted successfully!<br/>
       <a href="/">Submit another task</a><br/>
